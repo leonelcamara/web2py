@@ -31,7 +31,7 @@ locker = Lock()
 
 def RConn(application=None, *args, **vars):
     """
-    Istantiates a StrictRedis connection with parameters, at the first time
+    Instantiates a StrictRedis connection with parameters, at the first time
     only
     """
     locker.acquire()
@@ -45,6 +45,24 @@ def RConn(application=None, *args, **vars):
     finally:
         locker.release()
 
+
+def RConnCluster(application=None, *args, **vars):
+    """
+    Instantiates a RedisCluster connection with parameters, at the first time
+    only
+    """
+    locker.acquire()
+    try:
+        if application is None:
+            application = current.request.application
+        instance_name = 'redis_conn_' + application
+        if not hasattr(RConnCluster, instance_name):
+            setattr(RConnCluster, instance_name, redis.cluster.RedisCluster(*args, **vars))
+        return getattr(RConnCluster, instance_name)
+    finally:
+        locker.release()           
+
+        
 def acquire_lock(conn, lockname, identifier, ltime=10):
     while True:
         if conn.set(lockname, identifier, ex=ltime, nx=True):
